@@ -1,0 +1,74 @@
+import requests
+from lxml import html
+from urllib.parse import quote #编码转换函数
+
+def change_name(name):#编码转换
+    cname = quote(name,encoding="utf-8")
+    return cname
+
+
+#手机经过utf-8编码为：%E6%89%8B%E6%9C%BA
+def get_allmessage(names):#
+    cname = change_name(names)
+    url = "https://search.jd.com/Search?keyword="+cname+"&enc=utf-8"
+    header = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"}
+    response = requests.get(url,headers=header)
+    print(response)
+    #response.encoding = "utf-8"
+    res = html.fromstring(response.text)
+    print(res)
+    shangpin_list = res.xpath('//ul[@class="gl-warp clearfix"]/li')
+    print(len(shangpin_list))
+    print(shangpin_list)
+    get_message(shangpin_list)
+
+
+
+def get_message(shangpin_list):#数据筛选
+    message_dict = []
+    for message in shangpin_list:
+        name = message.xpath('div[@class="gl-i-wrap"]/div[@class="p-name p-name-type-2"]/a/em/text()')
+        print(name)
+        print(name[0])
+        price = message.xpath('div[@class="gl-i-wrap"]/div[@class="p-price"]/strong/i/text()')
+        if price == []:
+            price = ["预约中"]
+        print(price[0])
+        shopname = message.xpath('div[@class="gl-i-wrap"]/div[@class="p-shop"]/span/a/@title')
+        print(shopname[0])
+        href = message.xpath('div[@class="gl-i-wrap"]/div[@class="p-name p-name-type-2"]/a/@href')
+        print(href[0])
+        if shopname == []:
+            message_dict.append({
+                "name":name[0],
+                "price":price[0],
+                "shopname":'京东官方旗舰店',
+                "href":href[0]
+            })
+        else:
+            message_dict.append({
+                "name": name[0],
+                "price": price[0],
+                "shopname": shopname[0],
+                "href": "https:"+href[0]
+            })
+    save_message(message_dict)
+
+
+
+
+def save_message(message_dict):#数据的存储
+    for message in message_dict:
+        with open("D:\英雄时刻\{name}.txt".format(name="京东商品"),"a",encoding="utf-8") as f:
+            f.write("价格:"+message["price"]+"  链接:"+message["href"]+"  店铺名称:"+message["shopname"]+"  商品标题:"+message["name"]+"\n")
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    name = input("请输入商品名称：")
+    get_allmessage(name)
